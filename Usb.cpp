@@ -64,9 +64,15 @@ Usb::Usb()
   }
 }
 
-Return<void> Usb::switchRole(const hidl_string &/*portName*/,
-                             const V1_0::PortRole &/*newRole*/) {
+Return<void> Usb::switchRole(const hidl_string &portName,
+                             const V1_0::PortRole &newRole) {
+
   ALOGE("Usb switch role not supported");
+  if (mCallback_1_0 != NULL) {
+    Return<void> ret =
+        mCallback_1_0->notifyRoleSwitchStatus(portName, newRole, Status::ERROR);
+  }
+
   return Void();
 }
 
@@ -76,7 +82,7 @@ Return<void> Usb::switchRole(const hidl_string &/*portName*/,
  * object if required.
  */
 Status getPortStatusHelper(hidl_vec<PortStatus_1_1> *currentPortStatus_1_1,
-    bool /*V1_0*/) {
+    bool V1_0) {
   std::vector<std::string> names;
 
   names.push_back("port0");
@@ -99,8 +105,13 @@ Status getPortStatusHelper(hidl_vec<PortStatus_1_1> *currentPortStatus_1_1,
           (*currentPortStatus_1_1)[i].status.canChangeDataRole,
           (*currentPortStatus_1_1)[i].status.canChangePowerRole);
 
-    (*currentPortStatus_1_1)[i].status.supportedModes = V1_0::PortMode::UFP;
-    (*currentPortStatus_1_1)[i].supportedModes = PortMode_1_1::NONE | PortMode_1_1::UFP;
+    if (V1_0) {
+      (*currentPortStatus_1_1)[i].status.supportedModes = V1_0::PortMode::UFP;
+    } else {
+      (*currentPortStatus_1_1)[i].supportedModes = PortMode_1_1::NONE | PortMode_1_1::UFP;
+      (*currentPortStatus_1_1)[i].status.supportedModes = V1_0::PortMode::NONE;
+      (*currentPortStatus_1_1)[i].status.currentMode = V1_0::PortMode::NONE;
+    }
   }
   return Status::SUCCESS;
 }

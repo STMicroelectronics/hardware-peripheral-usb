@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "android.hardware.usb.gadget@1.0-service.stm32mp1"
+#define LOG_TAG "android.hardware.usb.gadget@1.1-service.stm32mp1"
 
 #include "UsbGadget.h"
 #include <dirent.h>
@@ -47,22 +47,27 @@ constexpr int DISCONNECT_WAIT_US = 10000;
 #define FUNCTIONS_PATH GADGET_PATH "functions/"
 #define FUNCTION_NAME "function"
 #define FUNCTION_PATH CONFIG_PATH FUNCTION_NAME
-#define RNDIS_PATH FUNCTIONS_PATH "gsi.rndis"
+#define RNDIS_PATH FUNCTIONS_PATH "rndis.0"
 
+// STMicroelectronics Vendor ID
 #define ST_VENDOR_ID "0x0483"
-#define ST_RNDIS_ADB_PRODUCT_ID "0x0102"
-#define ST_RNDIS_PRODUCT_ID "0x0103"
-#define ST_MTP_ADB_PRODUCT_ID "0x0104"
-#define ST_MTP_PRODUCT_ID "0x0105"
-#define ST_PTP_ADB_PRODUCT_ID "0x0106"
-#define ST_PTP_PRODUCT_ID "0x0107"
+
+// Single USB devices
 #define ST_ADB_PRODUCT_ID "0x0ADB"
+#define ST_RNDIS_PRODUCT_ID "0x0103"
+#define ST_MTP_PRODUCT_ID "0x0105"
+#define ST_PTP_PRODUCT_ID "0x0107"
+
+// Composite USB devices
+#define ST_RNDIS_ADB_PRODUCT_ID "0x0102"
+#define ST_MTP_ADB_PRODUCT_ID "0x0104"
+#define ST_PTP_ADB_PRODUCT_ID "0x0106"
 
 namespace android {
 namespace hardware {
 namespace usb {
 namespace gadget {
-namespace V1_0 {
+namespace V1_1 {
 namespace implementation {
 
 volatile bool gadgetPullup;
@@ -247,8 +252,17 @@ V1_0::Status UsbGadget::tearDownGadget() {
 
   if (mMonitorCreated) {
     uint64_t flag = 100;
+    unsigned long ret;
+
     // Stop the monitor thread by writing into signal fd.
-    write(mEventFd, &flag, sizeof(flag));
+    ret = TEMP_FAILURE_RETRY(write(mEventFd, &flag, sizeof(flag)));
+    if (ret < 0) {
+        ALOGE("Error writing errno=%d", errno);
+    } else if (ret < sizeof(flag)) {
+        ALOGE("Short write length=%lu", ret);
+    }
+
+    ALOGI("mMonitor signalled to exit");
     mMonitor->join();
     mMonitorCreated = false;
     ALOGI("mMonitor destroyed");
@@ -261,6 +275,15 @@ V1_0::Status UsbGadget::tearDownGadget() {
   mEpollFd.reset(-1);
   mEndpointList.clear();
   return Status::SUCCESS;
+}
+
+Return<Status> UsbGadget::reset() {
+    if (!WriteStringToFile("none", PULLUP_PATH)) {
+        ALOGI("Gadget cannot be pulled down");
+        return Status::ERROR;
+    }
+
+    return Status::SUCCESS;
 }
 
 static int linkFunction(const char *function, int index) {
@@ -379,12 +402,14 @@ V1_0::Status UsbGadget::setupFunctions(
 
   if ((functions & GadgetFunction::RNDIS) != 0) {
     ALOGI("setCurrentUsbFunctions rndis");
-    if (linkFunction("gsi.rndis", i++)) return Status::ERROR;
+    if (linkFunction("rndis.0", i++)) return Status::ERROR;
   }
 
   if ((functions & GadgetFunction::ADB) != 0) {
     ffsEnabled = true;
     ALOGI("setCurrentUsbFunctions Adb");
+    if (!WriteStringToFile("1", DESC_USE_PATH))
+      return Status::ERROR;
     if (inotify_add_watch(inotifyFd, "/dev/usb-ffs/adb/", IN_ALL_EVENTS) == -1)
       return Status::ERROR;
 
@@ -409,7 +434,7 @@ V1_0::Status UsbGadget::setupFunctions(
     return Status::ERROR;
   }
 
-  unique_fd epollFd(epoll_create(2));
+  unique_fd epollFd(epoll_create1(EPOLL_CLOEXEC));
   if (epollFd == -1) {
     ALOGE("mEpollFd failed to create %d", errno);
     return Status::ERROR;
@@ -499,7 +524,7 @@ error:
   return Void();
 }
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V1_1
 }  // namespace gadget
 }  // namespace usb
 }  // namespace hardware

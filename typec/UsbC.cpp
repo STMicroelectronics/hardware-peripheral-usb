@@ -97,6 +97,17 @@ std::string convertRoletoString(PortRole role) {
     return "none";
 }
 
+void extractRole(std::string *roleName) {
+  std::size_t first, last;
+
+  first = roleName->find("[");
+  last = roleName->find("]");
+
+  if (first != std::string::npos && last != std::string::npos) {
+    *roleName = roleName->substr(first + 1, last - first - 1);
+  }
+}
+
 Status getCurrentRoleHelper(std::string portName,
         PortRoleType type, uint32_t &currentRole)  {
     std::string filename;
@@ -109,6 +120,8 @@ Status getCurrentRoleHelper(std::string portName,
         ALOGE("Can't read %s", filename.c_str());
         return Status::ERROR;
     }
+
+    extractRole(&roleName);
 
     if (roleName == "dfp")
         currentRole = static_cast<uint32_t> (V1_0::PortMode::DFP);
@@ -295,6 +308,7 @@ Return<void> UsbC::switchRole(const hidl_string &portName,
         file << temp.c_str();
         file.close();
         if (!readFile(filename, written)) {
+            extractRole(&written);
             ALOGI("written: %s", written.c_str());
             if (written == convertRoletoString(newRole)) {
                 Return<void> ret =
