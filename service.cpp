@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,49 +14,22 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "android.hardware.usb@1.1-service.stm32mp1"
+#include <android-base/logging.h>
+#include <android/binder_manager.h>
+#include <android/binder_process.h>
 
-#include <hidl/HidlTransportSupport.h>
 #include "Usb.h"
-#include "UsbGadget.h"
 
-using android::sp;
-
-// libhwbinder:
-using android::hardware::configureRpcThreadpool;
-using android::hardware::joinRpcThreadpool;
-
-// Generated HIDL files
-using android::hardware::usb::V1_1::IUsb;
-using android::hardware::usb::gadget::V1_1::IUsbGadget;
-using android::hardware::usb::V1_1::implementation::Usb;
-using android::hardware::usb::gadget::V1_1::implementation::UsbGadget;
-
-using android::OK;
-using android::status_t;
+using ::aidl::android::hardware::usb::Usb;
 
 int main() {
-  android::sp<IUsb> service = new Usb();
-  android::sp<IUsbGadget> service2 = new UsbGadget();
+    ABinderProcess_setThreadPoolMaxThreadCount(0);
+    std::shared_ptr<Usb> usb = ndk::SharedRefBase::make<Usb>();
 
-  configureRpcThreadpool(2, true /*callerWillJoin*/);
-  status_t status = service->registerAsService();
+    const std::string instance = std::string() + Usb::descriptor + "/default";
+    binder_status_t status = AServiceManager_addService(usb->asBinder().get(), instance.c_str());
+    CHECK(status == STATUS_OK);
 
-  if (status != OK) {
-    ALOGE("Cannot register USB HAL service");
-    return 1;
-  }
-
-  status = service2->registerAsService();
-
-  if (status != OK) {
-    ALOGE("Cannot register USB Gadget HAL service");
-    return 1;
-  }
-
-  ALOGI("USB HAL Ready.");
-  joinRpcThreadpool();
-  // Under noraml cases, execution will not reach this line.
-  ALOGI("USB HAL failed to join thread pool.");
-  return 1;
+    ABinderProcess_joinThreadPool();
+    return -1; // Should never be reached
 }

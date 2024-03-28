@@ -1,45 +1,38 @@
 # hardawre-usb #
 
-This module contains the STMicroelectronics Usb hardware service source code.
-It is part of the STMicroelectronics delivery for Android (see the [delivery][] for more information).
-
-[delivery]: https://wiki.st.com/stm32mpu/wiki/STM32MP15_distribution_for_Android_release_note_-_v2.0.0
+This module contains the STMicroelectronics android.hardware.usb and android.hardware.usb.gadget source code.
+It is part of the STMicroelectronics delivery for Android.
 
 ## Description ##
 
-This module version is the updated version for STM32MP15 distribution for Android V2.0
+This module implements android.hardware.usb AIDL version 1.
 Please see the Android delivery release notes for more details.
-
-It is based on Module Usb API version 1.1 and Module UsbGadget API version 1.1.
 
 ## Documentation ##
 
 * The [release notes][] provide information on the release.
-* The [distribution package][] provides detailed information on how to use this delivery.
-
-[release notes]: https://wiki.st.com/stm32mpu/wiki/STM32MP15_distribution_for_Android_release_note_-_v2.0.0
-[distribution package]: https://wiki.st.com/stm32mpu/wiki/STM32MP1_Distribution_Package_for_Android
+[release notes]: https://wiki.st.com/stm32mpu/wiki/STM32_MPU_OpenSTDroid_release_note_-_v5.1.0
 
 ## Dependencies ##
 
 This module can't be used alone. It is part of the STMicroelectronics delivery for Android.
 To be able to use it the device.mk must have the following packages:
 
-For USB type-C:
-```
-PRODUCT_PACKAGES += \
-    android.hardware.usb@<version>-service.stm32mp1-c
-```
-
 For USB:
 ```
 PRODUCT_PACKAGES += \
-    android.hardware.usb@<version>-service.stm32mp1
+    android.hardware.usb-service.stm32mpu
+```
+
+For USB Gadget:
+```
+PRODUCT_PACKAGES += \
+    android.hardware.usb-gadget@<version>-service.stm32mpu
 ```
 
 ## Containing ##
 
-This directory contains the sources and associated Android makefile to generate the android.hardware.usb@<version>-service.stm32mp1 binary.
+This directory contains the sources and associated Android makefile to generate the android.hardware.usb@<version>-service.stm32mpu binary.
 
 ## License ##
 
