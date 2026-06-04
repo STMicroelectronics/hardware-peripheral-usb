@@ -17,12 +17,12 @@
 #ifndef HARDWARE_USB_USBGADGETCOMMON_H
 #define HARDWARE_USB_USBGADGETCOMMON_H
 
+#include <aidl/android/hardware/usb/gadget/IUsbGadget.h>
+#include <aidl/android/hardware/usb/gadget/GadgetFunction.h>
+
 #include <android-base/file.h>
 #include <android-base/properties.h>
 #include <android-base/unique_fd.h>
-
-#include <android/hardware/usb/gadget/1.2/IUsbGadget.h>
-#include <android/hardware/usb/gadget/1.2/types.h>
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -82,8 +82,9 @@ using ::android::base::GetProperty;
 using ::android::base::SetProperty;
 using ::android::base::unique_fd;
 using ::android::base::WriteStringToFile;
-using ::android::hardware::usb::gadget::V1_0::Status;
-using ::android::hardware::usb::gadget::V1_2::GadgetFunction;
+
+using ::aidl::android::hardware::usb::gadget::Status;
+using ::aidl::android::hardware::usb::gadget::GadgetFunction;
 
 using ::std::lock_guard;
 using ::std::move;
@@ -109,10 +110,10 @@ class MonitorFfs {
     unique_fd mEventFd;
     // Pools on mInotifyFd and mEventFd.
     unique_fd mEpollFd;
-    vector<int> mWatchFd;
+    std::vector<int> mWatchFd;
 
     // Maintains the list of Endpoints.
-    vector<string> mEndpointList;
+    std::vector<std::string> mEndpointList;
     // protects the CV.
     std::mutex mLock;
     std::condition_variable mCv;
@@ -123,7 +124,7 @@ class MonitorFfs {
     bool mCurrentUsbFunctionsApplied;
 
     // Thread object that executes the ep monitoring logic.
-    unique_ptr<thread> mMonitor;
+    std::unique_ptr<std::thread> mMonitor;
     // Callback to be invoked when gadget is pulled up.
     void (*mCallback)(bool functionsApplied, void* payload);
     void* mPayload;
@@ -143,9 +144,9 @@ class MonitorFfs {
     // Returns immediately if the gadget is already pulled up.
     bool waitForPullUp(int timeout_ms);
     // Adds the given fd to the watch list.
-    bool addInotifyFd(string fd);
+    bool addInotifyFd(std::string fd);
     // Adds the given endpoint to the watch list.
-    void addEndPoint(string ep);
+    void addEndPoint(std::string ep);
     // Registers the async callback from the caller to notify the caller
     // when the gadget pull up happens.
     void registerFunctionsAppliedCallback(void (*callback)(bool functionsApplied, void*(payload)),
